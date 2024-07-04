@@ -51,7 +51,7 @@ Sure! Below is a detailed explanation on how to set up the system to capture ima
 
 6. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/raspberrypi-to-jetson-image-transfer.git
+   git clone https://github.com/shahroz8899/raspberrypi-to-jetson-image-transfer.git
    cd raspberrypi-to-jetson-image-transfer
    ```
 
