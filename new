@@ -1,0 +1,68 @@
+import os
+import logging
+import paho.mqtt.client as mqtt
+import base64
+
+# Configuration
+broker = 'localhost'  # Replace with the IP address or hostname of the broker if necessary
+port = 1883
+image_topic = 'images/jetson_orin'
+image_save_directory = './received_images_from_server/'  # Directory to save the received images
+
+# Set up logging
+logging.basicConfig(filename='logs/jetson_image_receiver.log', level=logging.INFO,
+                    format='%(asctime)s %(levelname)s:%(message)s')
+
+# MQTT callbacks
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logging.info("Connected successfully to broker")
+        logging.info(f"Subscribing to topic {image_topic}")
+        client.subscribe(image_topic)
+    else:
+        logging.error(f"Connection failed with code {rc}")
+
+def on_message(client, userdata, msg):
+    try:
+        image_data = base64.b64decode(msg.payload)
+
+        # Get the next image number to save the image
+        image_number = get_next_image_number(image_save_directory, 'received_')
+        image_path = os.path.join(image_save_directory, f"received_{image_number:02d}.jpg")
+
+        # Save the image
+        os.makedirs(image_save_directory, exist_ok=True)
+        with open(image_path, 'wb') as file:
+            file.write(image_data)
+
+        logging.info(f"Image received and saved to {image_path}")
+    except Exception as e:
+        logging.error(f"Failed to process message: {e}")
+
+def get_next_image_number(directory, prefix):
+    try:
+        files = os.listdir(directory)
+    except FileNotFoundError:
+        return 1  # Return 1 if the directory does not exist yet
+
+    numbers = [
+        int(f.split('_')[1].split('.')[0])
+        for f in files
+        if f.startswith(prefix) and f.split('_')[1].split('.')[0].isdigit()
+    ]
+    return max(numbers, default=0) + 1
+
+def main():
+    logging.info("Starting Jetson Orin MQTT image receiver...")
+    client = mqtt.Client(protocol=mqtt.MQTTv311)  # Use MQTT version 3.1.1
+
+    client.enable_logger(logging.getLogger())  # Enable built-in logging
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(broker, port, 60)
+    client.loop_forever()
+
+if __name__ == "__main__":
+    main()
